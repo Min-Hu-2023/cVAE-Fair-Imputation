@@ -132,7 +132,7 @@
 
     .metrics-grid-3x2 {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap: 1.2rem;
     }
 
@@ -145,100 +145,272 @@
     .plot-small {
       height: 320px;
     }
+
+    #predictionSection .card {
+      overflow: visible;      /* Allow plots to expand without clipping */
+      width: 100%;            /* Card grows to full container width */
+    }
+
+    /* New styles for dataset setup section */
+    .dataset-toggle {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .dataset-toggle label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.8rem;
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+      background: #f9fafb;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+
+    .dataset-toggle input[type="radio"] {
+      accent-color: #2563eb;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      margin-bottom: 0.75rem;
+      max-width: 340px;
+    }
+
+    .field-group input[type="file"],
+    .field-group input[type="text"],
+    .field-group select {
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    .field-group input[type="text"]:focus,
+    .field-group input[type="file"]:focus,
+    .field-group select:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+    }
+
+    .hint-text {
+      font-size: 0.85rem;
+      color: #9ca3af;
+      margin-top: 0.25rem;
+    }
+
+    .primary-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.6rem 1.2rem;
+      border-radius: 999px;
+      border: none;
+      background: #2563eb;
+      color: white;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 0.35rem;
+    }
+
+    .primary-button:hover {
+      background: #1d4ed8;
+    }
+
+    .primary-button:active {
+      background: #1e40af;
+    }
   </style>
 </head>
 
 <body>
   <div class="page">
     <header>
-      <h1>Fair Imputation Playground</h1>
+      <h1>Fair-cVAE Imputation</h1>
       <p class="subtitle">
         Compare ground truth and imputed datasets across fairness, representation, and prediction.
       </p>
     </header>
 
-    <!-- Section 1: Fairness metrics (MSIE, IFR, FIS) -->
-    <section class="section">
+    <!-- New Section 1: Dataset & Sensitive Attribute -->
+    <section class="section" id="datasetSection">
       <div class="section-title">
-        <span class="step">1</span> Fairness Metrics (Train vs Test)
+        <span class="step">1</span> Dataset &amp; Sensitive Attribute
       </div>
       <div class="card">
         <p class="section-subtitle">
-          MSIE (Mean Squared Imputation Error), IFR (Imputation Fairness Risk), and FIS (Fair Imputation Score) for the selected imputation method (train and test).
+          Choose how you would (in a full system) provide the data and specify the sensitive attribute.
+          This panel is for demonstration and is not wired to the backend.
         </p>
-        <div class="metrics-grid-3x2">
-          <div id="msieTrainPlot" class="plot-container plot-small"></div>
-          <div id="msieTestPlot" class="plot-container plot-small"></div>
-          <div id="ifrTrainPlot" class="plot-container plot-small"></div>
-          <div id="ifrTestPlot" class="plot-container plot-small"></div>
-          <div id="fisTrainPlot" class="plot-container plot-small"></div>
-          <div id="fisTestPlot" class="plot-container plot-small"></div>
-        </div>
-      </div>
-    </section>
 
-    <!-- Section 2: Details for a specific imputation method -->
-    <section class="section">
-      <div class="section-title">
-        <span class="step">2</span> Imputation Method Details
-      </div>
-      <div class="card">
-        <!-- Dropdown -->
-        <div class="controls-row">
-          <label for="methodSelect">
-            Imputation method:
-            <select id="methodSelect"></select>
+        <div class="dataset-toggle">
+          <label>
+            <input type="radio" name="datasetMode" value="upload" checked />
+            Upload dataset
+          </label>
+          <label>
+            <input type="radio" name="datasetMode" value="synthetic" />
+            Use synthetic dataset
           </label>
         </div>
 
-        <!-- Visualization & Clustering -->
-        <h3 class="section-subtitle">Visualization &amp; Clustering</h3>
-        <div class="metrics-grid-2x2">
-          <div id="umapGtTrue" class="plot-container"></div>
-          <div id="umapGtCluster" class="plot-container"></div>
-          <div id="umapImpTrue" class="plot-container"></div>
-          <div id="umapImpCluster" class="plot-container"></div>
+        <!-- Upload dataset configuration -->
+        <div id="uploadConfig">
+          <div class="field-group">
+            <span>Upload file</span>
+            <input type="file" disabled />
+            <div class="hint-text">
+              File upload is a mock control for now – the demo always uses the built-in example dataset.
+            </div>
+          </div>
+
+          <div class="field-group">
+            <span>Sensitive attribute (column name)</span>
+            <input
+              type="text"
+              placeholder="e.g., race, gender, age_group"
+            />
+          </div>
         </div>
 
-        <!-- ARI / NMI barplots -->
-        <div class="metrics-grid-2x2" style="margin-top: 1.5rem;">
-          <div id="ariMajorPlot" class="plot-container plot-small"></div>
-          <div id="ariMinorPlot" class="plot-container plot-small"></div>
-          <div id="nmiMajorPlot" class="plot-container plot-small"></div>
-          <div id="nmiMinorPlot" class="plot-container plot-small"></div>
+        <!-- Synthetic dataset configuration -->
+        <div id="syntheticConfig" style="display: none;">
+          <div class="field-group">
+            <span>Bias between sensitive groups</span>
+            <select id="syntheticBiasLevel">
+              <option value="low">Low bias</option>
+              <option value="medium">Medium bias</option>
+              <option value="high">High bias</option>
+            </select>
+            <div class="hint-text">
+              Bias level is illustrative only; the current demo still uses the same synthetic dataset.
+            </div>
+          </div>
         </div>
+
+        <button id="startImputationBtn" class="primary-button">
+          Start imputation
+        </button>
       </div>
     </section>
 
-    <!-- Section 3: Prediction Performance -->
-    <section class="section">
-      <div class="section-title">
-        <span class="step">3</span> Prediction Performance
-      </div>
-      <div class="card">
-        <!-- Classification -->
-        <h3 class="section-subtitle">Classification (Accuracy)</h3>
-        <div class="metrics-grid-3x2">
-          <div id="accTrainOverallPlot" class="plot-container plot-small"></div>
-          <div id="accTrainMajorPlot" class="plot-container plot-small"></div>
-          <div id="accTrainMinorPlot" class="plot-container plot-small"></div>
-          <div id="accTestOverallPlot" class="plot-container plot-small"></div>
-          <div id="accTestMajorPlot" class="plot-container plot-small"></div>
-          <div id="accTestMinorPlot" class="plot-container plot-small"></div>
-        </div>
+    <!-- Results wrapper: revealed when user clicks "Start imputation" -->
+    <div id="resultsWrapper" style="display: none;">
 
-        <!-- Regression -->
-        <h3 class="section-subtitle" style="margin-top: 1.5rem;">Regression (MSE)</h3>
-        <div class="metrics-grid-3x2">
-          <div id="mseTrainOverallPlot" class="plot-container plot-small"></div>
-          <div id="mseTrainMajorPlot" class="plot-container plot-small"></div>
-          <div id="mseTrainMinorPlot" class="plot-container plot-small"></div>
-          <div id="mseTestOverallPlot" class="plot-container plot-small"></div>
-          <div id="mseTestMajorPlot" class="plot-container plot-small"></div>
-          <div id="mseTestMinorPlot" class="plot-container plot-small"></div>
+      <!-- Section 2: Fairness metrics (MSIE, IFR, FIS) -->
+      <section class="section">
+        <div class="section-title">
+          <span class="step">2</span> Fairness Metrics (Train vs Test)
         </div>
-      </div>
-    </section>
+        <div class="card">
+          <p class="section-subtitle">
+            MSIE (Mean Squared Imputation Error), IFR (Imputation Fairness Risk), and FIS (Fair Imputation Score) for the selected imputation method (train and test).
+          </p>
+          <div class="metrics-grid-3x2">
+            <div id="msieTrainPlot" class="plot-container plot-small"></div>
+            <div id="msieTestPlot" class="plot-container plot-small"></div>
+            <div id="ifrTrainPlot" class="plot-container plot-small"></div>
+            <div id="ifrTestPlot" class="plot-container plot-small"></div>
+            <div id="fisTrainPlot" class="plot-container plot-small"></div>
+            <div id="fisTestPlot" class="plot-container plot-small"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 3: Details for a specific imputation method -->
+      <section class="section">
+        <div class="section-title">
+          <span class="step">3</span> Imputation Method Details
+        </div>
+        <div class="card">
+          <!-- Dropdowns -->
+          <div class="controls-row">
+            <label for="methodSelect">
+              Imputation method:
+              <select id="methodSelect"></select>
+            </label>
+
+            <label for="resultTypeSelect">
+              Show:
+              <select id="resultTypeSelect">
+                <option value="viz">Visualization &amp; clustering</option>
+                <option value="pred">Prediction</option>
+              </select>
+            </label>
+
+            <label for="predictionTypeSelect" id="predictionTypeWrapper" style="display: none;">
+              Task:
+              <select id="predictionTypeSelect">
+                <option value="classification">Classification</option>
+                <option value="regression">Regression</option>
+              </select>
+            </label>
+          </div>
+
+          <!-- Visualization & Clustering -->
+          <div id="vizSection">
+            <h3 class="section-subtitle">Visualization &amp; Clustering</h3>
+            <div class="metrics-grid-2x2">
+              <div id="umapGtTrue" class="plot-container"></div>
+              <div id="umapGtCluster" class="plot-container"></div>
+              <div id="umapImpTrue" class="plot-container"></div>
+              <div id="umapImpCluster" class="plot-container"></div>
+            </div>
+
+            <!-- ARI / NMI barplots -->
+            <div class="metrics-grid-2x2" style="margin-top: 1.5rem;">
+              <div id="ariMajorPlot" class="plot-container plot-small"></div>
+              <div id="ariMinorPlot" class="plot-container plot-small"></div>
+              <div id="nmiMajorPlot" class="plot-container plot-small"></div>
+              <div id="nmiMinorPlot" class="plot-container plot-small"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 4: Prediction Performance -->
+      <section class="section" id="predictionSection" style="display: none;">
+        <div class="section-title">
+          <span class="step">4</span> Prediction Performance
+        </div>
+        <div class="card">
+          <!-- Classification -->
+          <div id="classificationSection">
+            <h3 class="section-subtitle">Classification (Accuracy)</h3>
+            <div class="metrics-grid-3x2">
+              <div id="accTrainOverallPlot" class="plot-container plot-small"></div>
+              <div id="accTrainMajorPlot" class="plot-container plot-small"></div>
+              <div id="accTrainMinorPlot" class="plot-container plot-small"></div>
+              <div id="accTestOverallPlot" class="plot-container plot-small"></div>
+              <div id="accTestMajorPlot" class="plot-container plot-small"></div>
+              <div id="accTestMinorPlot" class="plot-container plot-small"></div>
+            </div>
+          </div>
+
+          <!-- Regression -->
+          <div id="regressionSection" style="display: none; margin-top: 1.5rem;">
+            <h3 class="section-subtitle">Regression (MSE)</h3>
+            <div class="metrics-grid-3x2">
+              <div id="mseTrainOverallPlot" class="plot-container plot-small"></div>
+              <div id="mseTrainMajorPlot" class="plot-container plot-small"></div>
+              <div id="mseTrainMinorPlot" class="plot-container plot-small"></div>
+              <div id="mseTestOverallPlot" class="plot-container plot-small"></div>
+              <div id="mseTestMajorPlot" class="plot-container plot-small"></div>
+              <div id="mseTestMinorPlot" class="plot-container plot-small"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div> <!-- /#resultsWrapper -->
   </div>
 
   <script src="main.js"></script>

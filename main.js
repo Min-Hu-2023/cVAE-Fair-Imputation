@@ -15,6 +15,9 @@ const METHOD_COLORS = {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Initialize dataset-related UI (purely presentational)
+  initDatasetControls();
+
   fetch("imputation_viz_data.json")
     .then((resp) => resp.json())
     .then((json) => {
@@ -23,12 +26,54 @@ document.addEventListener("DOMContentLoaded", () => {
       CURRENT_METHOD_KEY = keys[0]; // default = first method in JSON
 
       initMethodSelect();
+      initResultTypeControls();
       updateAllForMethod(CURRENT_METHOD_KEY);
     })
     .catch((err) => {
       console.error("Failed to load imputation_viz_data.json:", err);
     });
 });
+
+// ---------------------------
+// 1b. Dataset controls (UI only)
+// ---------------------------
+
+function initDatasetControls() {
+  const uploadConfig = document.getElementById("uploadConfig");
+  const syntheticConfig = document.getElementById("syntheticConfig");
+  const datasetRadios = document.querySelectorAll("input[name='datasetMode']");
+  const startBtn = document.getElementById("startImputationBtn");
+  const resultsWrapper = document.getElementById("resultsWrapper");
+
+  if (datasetRadios && datasetRadios.length > 0) {
+    datasetRadios.forEach((radio) => {
+      radio.addEventListener("change", () => {
+        if (radio.value === "upload") {
+          if (uploadConfig) uploadConfig.style.display = "";
+          if (syntheticConfig) syntheticConfig.style.display = "none";
+        } else {
+          if (uploadConfig) uploadConfig.style.display = "none";
+          if (syntheticConfig) syntheticConfig.style.display = "";
+        }
+      });
+    });
+  }
+
+  if (startBtn && resultsWrapper) {
+    startBtn.addEventListener("click", () => {
+      // Reveal all the analysis sections
+      resultsWrapper.style.display = "";
+
+      // Re-render all plots now that the wrapper is visible
+      if (DATA && CURRENT_METHOD_KEY) {
+        updateAllForMethod(CURRENT_METHOD_KEY);
+      }
+
+      // Smooth scroll down
+      resultsWrapper.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+}
 
 // ---------------------------
 // 2. Method dropdown
@@ -64,6 +109,88 @@ function initMethodSelect() {
 }
 
 // ---------------------------------
+// 2b. Result-type controls
+// ---------------------------------
+
+function initResultTypeControls() {
+  const resultTypeSelect = document.getElementById("resultTypeSelect");
+  const predictionTypeWrapper = document.getElementById("predictionTypeWrapper");
+  const predictionTypeSelect = document.getElementById("predictionTypeSelect");
+
+  const vizSection = document.getElementById("vizSection");
+  const predictionSection = document.getElementById("predictionSection");
+  const classificationSection = document.getElementById("classificationSection");
+  const regressionSection = document.getElementById("regressionSection");
+
+  if (!resultTypeSelect) return;
+
+  // Switch between viz/clustering and prediction
+  resultTypeSelect.addEventListener("change", () => {
+    const mode = resultTypeSelect.value;
+
+    if (mode === "viz") {
+      if (vizSection) vizSection.style.display = "";
+      if (predictionSection) predictionSection.style.display = "none";
+      if (predictionTypeWrapper) predictionTypeWrapper.style.display = "none";
+    } else {
+      if (vizSection) vizSection.style.display = "none";
+      if (predictionSection) predictionSection.style.display = "";
+      if (predictionTypeWrapper) predictionTypeWrapper.style.display = "";
+
+      // Show whichever prediction task is selected
+      const task = predictionTypeSelect ? predictionTypeSelect.value : "classification";
+      if (task === "classification") {
+        if (classificationSection) classificationSection.style.display = "";
+        if (regressionSection) regressionSection.style.display = "none";
+      } else {
+        if (classificationSection) classificationSection.style.display = "none";
+        if (regressionSection) regressionSection.style.display = "";
+
+        // Re-render prediction plots so regression gets correct width
+        if (DATA && CURRENT_METHOD_KEY) {
+          const imp = DATA.imputations[CURRENT_METHOD_KEY];
+          if (imp && imp.metrics) {
+            renderPredictionSection(imp.metrics);
+          }
+        }
+      }
+
+      // Render prediction plots now that the prediction card is visible
+      if (DATA && CURRENT_METHOD_KEY) {
+        const imp = DATA.imputations[CURRENT_METHOD_KEY];
+        if (imp && imp.metrics) {
+          renderPredictionSection(imp.metrics);
+        }
+      }
+    }
+  });
+
+  // Switch between classification / regression
+  if (predictionTypeSelect) {
+    predictionTypeSelect.addEventListener("change", () => {
+      const task = predictionTypeSelect.value;
+
+      if (task === "classification") {
+        if (classificationSection) classificationSection.style.display = "";
+        if (regressionSection) regressionSection.style.display = "none";
+      } else {
+        // 🔑 Make regression visible *first*
+        if (classificationSection) classificationSection.style.display = "none";
+        if (regressionSection) regressionSection.style.display = "";
+
+        // 🔑 Then re-render prediction plots so regression gets correct width
+        if (DATA && CURRENT_METHOD_KEY) {
+          const imp = DATA.imputations[CURRENT_METHOD_KEY];
+          if (imp && imp.metrics) {
+            renderPredictionSection(imp.metrics);
+          }
+        }
+      }
+    });
+  }
+}
+
+// ---------------------------------
 // 3. Orchestrator: update all views
 // ---------------------------------
 
@@ -80,9 +207,13 @@ function updateAllForMethod(methodKey) {
   // Section 2: UMAPs + ARI/NMI
   renderVisualizationSection(gt.umap, imp.umap, metrics);
 
-  // Section 3: Classification / Regression
-  renderPredictionSection(metrics);
+  // Only render prediction plots if the prediction view is actually active
+  const resultTypeSelect = document.getElementById("resultTypeSelect");
+  if (resultTypeSelect && resultTypeSelect.value === "pred") {
+    renderPredictionSection(metrics);
+  }
 }
+
 
 // ---------------------------------
 // 4. Generic tiny barplot helper
@@ -107,18 +238,16 @@ function renderMetricBarAllMethods(containerId, metricKey, title, yAxisTitle, fi
   if (xs.length === 0) return;
 
   const trace = {
-  x: xs,
-  y: ys,
-  type: "bar",
-  text: ys.map((v) => v.toFixed(3)),
-  textposition: "auto",
-  marker: {
-    color: xs.map((method) => METHOD_COLORS[method] || "#888"), 
-    // fallback color if a method doesn’t exist in the map
-  },
-  hovertemplate: "%{x}<br>" + yAxisTitle + ": %{y:.3f}<extra></extra>",
+    x: xs,
+    y: ys,
+    type: "bar",
+    text: ys.map((v) => v.toFixed(3)),
+    textposition: "auto",
+    marker: {
+      color: xs.map((method) => METHOD_COLORS[method] || "#888"),
+    },
+    hovertemplate: "%{x}<br>" + yAxisTitle + ": %{y:.3f}<extra></extra>",
   };
-
 
   const yaxis = { title: yAxisTitle };
   if (fixed01) {
@@ -257,9 +386,6 @@ function renderClusterMetricPanels(/* m */) {
 // 7. Section 3: Prediction performance
 // ---------------------------------
 
-// 7. Section 3: Prediction performance
-// ---------------------------------
-
 function renderPredictionSection(/* m */) {
   // Classification: accuracy in [0, 1]
   renderMetricBarAllMethods(
@@ -343,4 +469,3 @@ function renderPredictionSection(/* m */) {
     "MSE"
   );
 }
-
